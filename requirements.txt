@@ -2,4 +2,4 @@ pandas
 streamlit
 GoogleNews
 openpyxl
-reportlab
+weasyprint
