@@ -25,7 +25,15 @@ if time_option == "Período personalizado":
     with col2:
         end_date = st.date_input("Data final", datetime.now())
     
-PALAVRAS_CHAVE_PADRAO = ["transformação digital"]
+PALAVRAS_CHAVE_PADRAO = [
+    "jucepi", "Alzenir Porto", "Gov.Pi empresas", "empreendedorismo", 
+    "consulta prévia", "contrato social", "consulta de viabilidade", 
+    "certidões", "livros", "balanço", "alterações", "baixa", "abertura", 
+    "startup", "leiloeiro público", "autenticação de livros", "transformação digital"
+]
+# Inicializa session_state
+if "noticias" not in st.session_state:
+    st.session_state.noticias = None
 
 with st.form("search_form"):
     palavras_chave_input = st.text_area(
@@ -63,12 +71,16 @@ if submit_button:
         progress_bar.progress((i + 1) / len(keywords))
     
     progress_bar.empty()
-    
+
     if all_results:
-        df = pd.DataFrame(all_results)
+        st.session_state.noticias = pd.DataFrame(all_results)
+
+    
+if st.session_state.noticias is not None:
+        df = st.session_state.noticias
 
         # Exibição das notícias em formato mobile-friendly
-        st.markdown("### 📰 Detalhes das Notícias")
+        st.markdown("###  Detalhes das Notícias")
         
         for keyword, group in df.groupby('keyword'):
             with st.expander(f"📌 {keyword} ({len(group)} notícias)"):
@@ -89,32 +101,6 @@ if submit_button:
                                     st.markdown(row['desc'])
                             
                             st.markdown("---")
-                    # else:
-                    #     st.info("Notícia sem dados completos")
-        # st.markdown("### 📊 Resumo das Buscas")
-        
-        # for _, row in df.groupby('keyword').size().reset_index().iterrows():
-        #     keyword = row['keyword']
-        #     count = row[0]
-            
-        #     with st.container():
-        #         cols = st.columns([2, 1])
-        #         with cols[0]:
-        #             st.markdown(f"**{keyword}**")
-        #             # st.markdown(f"**{keyword}** ({count} notícias)")
-        #         with cols[1]:
-        #             keyword_data = BytesIO()
-        #             df[df['keyword'] == keyword].to_excel(keyword_data, index=False, engine='openpyxl')
-        #             keyword_data.seek(0)
-                    
-        #             st.download_button(
-        #                 label="📥 Baixar XLSX",
-        #                 data=keyword_data,
-        #                 file_name=f"noticias_{keyword.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx",
-        #                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        #                 use_container_width=True)
-                
-                st.markdown("---")
         
         all_data = BytesIO()
         df.to_excel(all_data, index=False, engine='openpyxl')
@@ -174,6 +160,3 @@ if submit_button:
             mime="application/pdf",
             use_container_width=True
         )
-        
-    else:
-        st.warning("Nenhuma notícia encontrada para os termos pesquisados.")
