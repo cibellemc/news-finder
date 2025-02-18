@@ -25,9 +25,7 @@ if time_option == "Período personalizado":
     with col2:
         end_date = st.date_input("Data final", datetime.now())
     
-PALAVRAS_CHAVE_PADRAO = [
-"transformação digital"
-]
+PALAVRAS_CHAVE_PADRAO = ["transformação digital"]
 
 with st.form("search_form"):
     palavras_chave_input = st.text_area(
@@ -68,29 +66,53 @@ if submit_button:
     
     if all_results:
         df = pd.DataFrame(all_results)
-        st.markdown("### 📊 Resumo das Buscas")
+
+        # Exibição das notícias em formato mobile-friendly
+        st.markdown("### 📰 Detalhes das Notícias")
         
-        for _, row in df.groupby('keyword').size().reset_index().iterrows():
-            keyword = row['keyword']
-            count = row[0]
+        for keyword, group in df.groupby('keyword'):
+            with st.expander(f"📌 {keyword} ({len(group)} notícias)"):
+                for _, row in group.iterrows():
+                    if row.get("title") and row.get("link"):
+                        link = row["link"].split("&ved=")[0]
+                        
+                        # Container para cada notícia
+                        with st.container():
+                            st.markdown(f"#### [{row['title']}]({link})")
+                            
+                            date_str = row.get('date', 'Data não disponível')
+                            media_str = row.get('media', 'Fonte desconhecida')
+                            st.markdown(f"*{date_str} - {media_str}*")
+                            
+                            if row.get('desc'):
+                                if isinstance(row['desc'], str) and row['desc'].strip():
+                                    st.markdown(row['desc'])
+                            
+                            st.markdown("---")
+                    # else:
+                    #     st.info("Notícia sem dados completos")
+        # st.markdown("### 📊 Resumo das Buscas")
+        
+        # for _, row in df.groupby('keyword').size().reset_index().iterrows():
+        #     keyword = row['keyword']
+        #     count = row[0]
             
-            with st.container():
-                cols = st.columns([2, 1])
-                with cols[0]:
-                    st.markdown(f"**{keyword}**")
-                    # st.markdown(f"**{keyword}** ({count} notícias)")
-                with cols[1]:
-                    keyword_data = BytesIO()
-                    df[df['keyword'] == keyword].to_excel(keyword_data, index=False, engine='openpyxl')
-                    keyword_data.seek(0)
+        #     with st.container():
+        #         cols = st.columns([2, 1])
+        #         with cols[0]:
+        #             st.markdown(f"**{keyword}**")
+        #             # st.markdown(f"**{keyword}** ({count} notícias)")
+        #         with cols[1]:
+        #             keyword_data = BytesIO()
+        #             df[df['keyword'] == keyword].to_excel(keyword_data, index=False, engine='openpyxl')
+        #             keyword_data.seek(0)
                     
-                    st.download_button(
-                        label="📥 Baixar XLSX",
-                        data=keyword_data,
-                        file_name=f"noticias_{keyword.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
+        #             st.download_button(
+        #                 label="📥 Baixar XLSX",
+        #                 data=keyword_data,
+        #                 file_name=f"noticias_{keyword.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+        #                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        #                 use_container_width=True)
                 
                 st.markdown("---")
         
@@ -153,8 +175,5 @@ if submit_button:
             use_container_width=True
         )
         
-        
-        # st.markdown("### 📰 Detalhes das Notícias")
-        # st.markdown(html_content, unsafe_allow_html=True)
     else:
         st.warning("Nenhuma notícia encontrada para os termos pesquisados.")
