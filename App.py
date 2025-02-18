@@ -2,6 +2,11 @@ import streamlit as st
 import pandas as pd
 from GoogleNews import GoogleNews
 from datetime import datetime, timedelta
+from io import BytesIO
+# from reportlab.lib.pagesizes import letter
+# from reportlab.pdfgen import canvas
+from weasyprint import HTML
+
 
 st.title("📰 Extração de Notícias")
 
@@ -13,7 +18,6 @@ time_option = st.sidebar.radio(
     index=0
 )
 
-# Handle custom date range
 if time_option == "Período personalizado":
     col1, col2 = st.sidebar.columns(2)
     with col1:
@@ -21,12 +25,10 @@ if time_option == "Período personalizado":
     with col2:
         end_date = st.date_input("Data final", datetime.now())
     
-# Lista de palavras-chave padrão
 PALAVRAS_CHAVE_PADRAO = [
-    "transformação digital"
+"transformação digital"
 ]
 
-# Form for keyword input
 with st.form("search_form"):
     palavras_chave_input = st.text_area(
         "Digite palavras-chave (separe por vírgula):",
@@ -35,21 +37,13 @@ with st.form("search_form"):
     submit_button = st.form_submit_button('Buscar notícias')
 
 if submit_button:
-    # Convert input to list
     keywords = [palavra.strip() for palavra in palavras_chave_input.split(",") if palavra.strip()]
-    
-    # Create DataFrame to store all results
     all_results = []
-    
-    # Progress bar
-    progress_text = "Buscando notícias..."
     progress_bar = st.progress(0)
-    
-    # Configure GoogleNews based on time period
+
     for i, keyword in enumerate(keywords):
         googlenews = GoogleNews(lang='pt-BR')
         
-        # Set time period based on selection
         if time_option == "Últimas 24 horas":
             googlenews.set_period('1d')
         elif time_option == "Última semana":
@@ -59,92 +53,108 @@ if submit_button:
         elif time_option == "Período personalizado":
             googlenews.set_time_range(start_date.strftime('%m/%d/%Y'), end_date.strftime('%m/%d/%Y'))
         
-        # Search for news
         googlenews.search(keyword)
         results = googlenews.result()
         
         if results:
-            # Add keyword column to results
             for result in results:
                 result['keyword'] = keyword
             all_results.extend(results)
         
         googlenews.clear()
-        
-        # Update progress bar
         progress_bar.progress((i + 1) / len(keywords))
-
-    # Remove progress bar after completion
+    
     progress_bar.empty()
     
     if all_results:
         df = pd.DataFrame(all_results)
-        
-        # Tabela responsiva
         st.markdown("### 📊 Resumo das Buscas")
         
-        # Versão mobile-friendly da tabela de resumo
         for _, row in df.groupby('keyword').size().reset_index().iterrows():
             keyword = row['keyword']
             count = row[0]
             
-            # Container para cada linha
             with st.container():
-                # Usar colunas com proporções ajustadas para mobile
                 cols = st.columns([2, 1])
-                
                 with cols[0]:
-                    st.markdown(f"**{keyword}** ({count} notícias)")
-                
+                    st.markdown(f"**{keyword}**")
+                    # st.markdown(f"**{keyword}** ({count} notícias)")
                 with cols[1]:
-                    keyword_data = df[df['keyword'] == keyword].to_csv(
-                        index=False,
-                        encoding='utf-8-sig'
-                    ).encode('utf-8-sig')
+                    keyword_data = BytesIO()
+                    df[df['keyword'] == keyword].to_excel(keyword_data, index=False, engine='openpyxl')
+                    keyword_data.seek(0)
                     
                     st.download_button(
-                        label="📥 Baixar",
+                        label="📥 Baixar XLSX",
                         data=keyword_data,
-                        file_name=f"noticias_{keyword.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
+                        file_name=f"noticias_{keyword.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
                     )
                 
                 st.markdown("---")
         
-        # Botão para baixar todas as notícias
-        all_data = df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+        all_data = BytesIO()
+        df.to_excel(all_data, index=False, engine='openpyxl')
+        all_data.seek(0)
+        
         st.download_button(
-            label="📥 Baixar todas as notícias",
+            label="📥 Baixar todas as notícias (XLSX)",
             data=all_data,
-            file_name=f"todas_noticias_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv",
+            file_name=f"todas_noticias_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
         
-        # Exibição das notícias em formato mobile-friendly
-        st.markdown("### 📰 Detalhes das Notícias")
-        
+        # Gerar HTML
+        html_content = """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h2, h3 { color: #333; }
+                div.news-item { margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+                a { font-weight: bold; color: #007BFF; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+                p { margin: 5px 0; }
+            </style>
+        </head>
+        <body>
+        <h2>Detalhes das Notícias</h2>
+        """
         for keyword, group in df.groupby('keyword'):
-            with st.expander(f"📌 {keyword} ({len(group)} notícias)"):
-                for _, row in group.iterrows():
-                    if row.get("title") and row.get("link"):
-                        link = row["link"].split("&ved=")[0]
-                        
-                        # Container para cada notícia
-                        with st.container():
-                            st.markdown(f"#### [{row['title']}]({link})")
-                            
-                            date_str = row.get('date', 'Data não disponível')
-                            media_str = row.get('media', 'Fonte desconhecida')
-                            st.markdown(f"*{date_str} - {media_str}*")
-                            
-                            if row.get('desc'):
-                                if isinstance(row['desc'], str) and row['desc'].strip():
-                                    st.markdown(row['desc'])
-                            
-                            st.markdown("---")
-                    else:
-                        st.info("Notícia sem dados completos")
+            html_content += f"<h3>{keyword} ({len(group)} notícias)</h3>"
+            for _, row in group.iterrows():
+                link = row.get("link", "#").split("&ved=")[0]
+                title = row.get("title", "Sem título")
+                date_str = row.get("date", "Data não disponível")
+                media_str = row.get("media", "Fonte desconhecida")
+                desc = row.get("desc", "Sem descrição")
+                html_content += f"""
+                    <div class='news-item'>
+                        <a href='{link}' target='_blank'>{title}</a>
+                        <p>Descrição: {desc}</p>
+                        <p>Fonte: {media_str} - {date_str}</p>
+                    </div>
+                """
+            html_content += "<br>"
+        html_content += "</body></html>"
+        
+        # Converter HTML para PDF
+        pdf_file = BytesIO()
+        HTML(string=html_content).write_pdf(pdf_file)
+        pdf_file.seek(0)
+        
+        st.download_button(
+            label="📥 Baixar detalhes das notícias (PDF)",
+            data=pdf_file,
+            file_name=f"noticias_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+        
+        
+        # st.markdown("### 📰 Detalhes das Notícias")
+        # st.markdown(html_content, unsafe_allow_html=True)
     else:
         st.warning("Nenhuma notícia encontrada para os termos pesquisados.")
