@@ -10,26 +10,22 @@ from weasyprint import HTML
 
 st.title("📰 Extração de Notícias")
 
-# Sidebar for time period selection
-st.sidebar.header("⏱️ Período de Busca")
-time_option = st.sidebar.radio(
-    "Selecione o período:",
-    ["Últimas 24 horas", "Última semana", "Último mês", "Período personalizado"],
-    index=0
-)
+# Sidebar para escolha da quantidade de notícias
+st.sidebar.header("⚙️ Configurações de Busca")
+num_news = st.sidebar.slider("Quantidade de notícias por palavra-chave:", min_value=10, max_value=50, value=10, step=10)
 
-if time_option == "Período personalizado":
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        start_date = st.date_input("Data inicial", datetime.now() - timedelta(days=7))
-    with col2:
-        end_date = st.date_input("Data final", datetime.now())
+# if time_option == "Período personalizado":
+#     col1, col2 = st.sidebar.columns(2)
+#     with col1:
+#         start_date = st.date_input("Data inicial", datetime.now() - timedelta(days=7))
+#     with col2:
+#         end_date = st.date_input("Data final", datetime.now())
     
 PALAVRAS_CHAVE_PADRAO = [
-    "jucepi", "Alzenir Porto", "Gov.Pi empresas", "empreendedorismo", 
-    "consulta prévia", "contrato social", "consulta de viabilidade", 
-    "certidões", "livros", "balanço", "alterações", "baixa", "abertura", 
-    "startup", "leiloeiro público", "autenticação de livros", "transformação digital"
+    "jucepi", "Alzenir Porto", "Gov.Pi empresas", "empreendedorismo" 
+    # "consulta prévia", "contrato social", "consulta de viabilidade", 
+    # "certidões", "livros", "balanço", "alterações", "baixa", "abertura", 
+    # "startup", "leiloeiro público", "autenticação de livros", "transformação digital"
 ]
 # Inicializa session_state
 if "noticias" not in st.session_state:
@@ -50,30 +46,38 @@ if submit_button:
     for i, keyword in enumerate(keywords):
         googlenews = GoogleNews(lang='pt-BR')
         
-        if time_option == "Últimas 24 horas":
-            googlenews.set_period('1d')
-        elif time_option == "Última semana":
-            googlenews.set_period('7d')
-        elif time_option == "Último mês":
-            googlenews.set_period('1m')
-        elif time_option == "Período personalizado":
-            googlenews.set_time_range(start_date.strftime('%m/%d/%Y'), end_date.strftime('%m/%d/%Y'))
+        # if time_option == "Últimas 24 horas":
+        #     googlenews.set_period('1d')
+        # elif time_option == "Última semana":
+        #     googlenews.set_period('7d')
+        # elif time_option == "Último mês":
+        #     googlenews.set_period('1m')
+        # elif time_option == "Período personalizado":
+        #     googlenews.set_time_range(start_date.strftime('%m/%d/%Y'), end_date.strftime('%m/%d/%Y'))
         
         googlenews.search(keyword)
-        results = googlenews.result()
-        
-        if results:
+
+        total_results = 0
+        page = 1
+
+        while total_results < num_news:
+            results = googlenews.page_at(page)
+            if not results:
+                break
             for result in results:
                 result['keyword'] = keyword
             all_results.extend(results)
-        
+            total_results += len(results)
+            page += 1
+            
         googlenews.clear()
         progress_bar.progress((i + 1) / len(keywords))
     
-    progress_bar.empty()
+        progress_bar.empty()
 
     if all_results:
-        st.session_state.noticias = pd.DataFrame(all_results)
+        df = pd.DataFrame(all_results)
+        st.session_state.noticias = df
 
     
 if st.session_state.noticias is not None:
@@ -103,6 +107,15 @@ if st.session_state.noticias is not None:
                             st.markdown("---")
         
         all_data = BytesIO()
+        df.drop(columns=["datetime", "img"], inplace=True, errors="ignore")
+        df.rename(columns={
+    "title": "Título",
+    "media": "Fonte",
+    "date": "Data",
+    "desc": "Descrição",
+    "link": "Link",
+}, inplace=True)
+
         df.to_excel(all_data, index=False, engine='openpyxl')
         all_data.seek(0)
         
@@ -133,11 +146,11 @@ if st.session_state.noticias is not None:
         for keyword, group in df.groupby('keyword'):
             html_content += f"<h3>{keyword} ({len(group)} notícias)</h3>"
             for _, row in group.iterrows():
-                link = row.get("link", "#").split("&ved=")[0]
-                title = row.get("title", "Sem título")
-                date_str = row.get("date", "Data não disponível")
-                media_str = row.get("media", "Fonte desconhecida")
-                desc = row.get("desc", "Sem descrição")
+                link = row.get("Link", "#").split("&ved=")[0]
+                title = row.get("Título", "Sem título")
+                date_str = row.get("Data", "Data não disponível")
+                media_str = row.get("Fonte", "Fonte desconhecida")
+                desc = row.get("Descrição", "Sem descrição")
                 html_content += f"""
                     <div class='news-item'>
                         <a href='{link}' target='_blank'>{title}</a>
