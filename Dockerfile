@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     software-properties-common \
     git \
+    libpangocairo-1.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/cibellemc/news-finder.git .
