@@ -22,10 +22,11 @@ num_news = st.sidebar.slider("Quantidade de notícias por palavra-chave:", min_v
 #         end_date = st.date_input("Data final", datetime.now())
     
 PALAVRAS_CHAVE_PADRAO = [
-    "jucepi", "Alzenir Porto", "Gov.Pi empresas", "empreendedorismo" 
+    # "jucepi", "Alzenir Porto", "Gov.Pi empresas", "empreendedorismo" 
     # "consulta prévia", "contrato social", "consulta de viabilidade", 
     # "certidões", "livros", "balanço", "alterações", "baixa", "abertura", 
     # "startup", "leiloeiro público", "autenticação de livros", "transformação digital"
+    "inteligência artificial", "chatgpt", "openai", "modelos de linguagem", "aprendizado de máquina"
 ]
 # Inicializa session_state
 if "noticias" not in st.session_state:
