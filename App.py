@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from weasyprint import HTML
 
-st.set_page_config(page_title="Extração de Notícias", page_icon=None, layout="wide")
+st.set_page_config(page_title="Extração de Notícias", page_icon=None)
 
 # Custom CSS for Professional Layout (Theme Agnostic)
 st.markdown("""
@@ -21,50 +21,68 @@ st.markdown("""
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         border-right: 1px solid rgba(128, 128, 128, 0.1);
-        width: 280px !important;
+        width: 300px !important;
     }
     .sidebar-logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 1.25rem;
+        font-size: 1.5rem;
         font-weight: 700;
-        color: #4facfe;
+        color: inherit;
         margin-bottom: 30px;
         padding-top: 10px;
         text-transform: uppercase;
         letter-spacing: 1px;
     }
     .sidebar-section-title {
-        font-size: 0.7rem;
-        font-weight: 600;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: inherit;
+        margin-top: 25px;
+        margin-bottom: 12px;
+    }
+    .sidebar-explanation {
+        font-size: 0.9rem;
         color: grey;
-        text-transform: uppercase;
-        letter-spacing: 1.2px;
-        margin: 15px 0 8px 0;
-        opacity: 0.7;
+        line-height: 1.5;
+        margin-bottom: 25px;
+        opacity: 0.8;
+    }
+    
+    /* Hero Header */
+    .hero-container {
+        text-align: center;
+        margin-bottom: 40px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        color: inherit;
+        margin-bottom: 15px;
+        letter-spacing: -0.5px;
+    }
+    .hero-subtext {
+        font-size: 0.95rem;
+        color: grey;
+        line-height: 1.6;
+        opacity: 0.9;
+    }
+    
+    /* Center search cards */
+    .stMainContainer .stVerticalBlock {
+        align-items: center;
+    }
+    .stMainContainer [data-testid="stVerticalBlock"] > div {
+        width: 100%;
+    }
+    .centered-card {
+        max-width: 850px;
+        margin: 0 auto;
     }
     [data-testid="stSidebarNav"] { display: none; }
     
-    /* Content Components */
-    .search-container {
-        border-radius: 12px;
-        padding: 24px;
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        margin-bottom: 25px;
-        background-color: rgba(128, 128, 128, 0.05);
-    }
-    .search-type-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        color: #4facfe;
-        font-weight: 600;
-        margin-bottom: 24px;
-        font-size: 0.95rem;
-        text-transform: uppercase;
-    }
-    
+    /* News Card */
     .news-card {
         border-radius: 12px;
         padding: 16px 20px;
@@ -99,15 +117,16 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+        margin-top: 10px;
+        margin-bottom: 25px;      
     }
     
     .results-title {
-        font-size: 1.15rem;
+        font-size: 0.9rem;
         font-weight: 700;
-        color: inherit;
+        color: #4facfe;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
     .stats-label {
@@ -117,18 +136,53 @@ st.markdown("""
         opacity: 0.8;
     }
     
+    /* Sidebar Widgets */
+    [data-testid="stSidebar"] label p {
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {
+        font-size: 1rem !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput input {
+        font-size: 1rem !important;
+    }
+    
     .copyright-footer {
         text-align: center; color: grey; font-size: 0.72rem;
         margin: 60px 0 40px 0; letter-spacing: 1.5px; font-weight: 600; opacity: 0.6;
     }
+    
+    /* Search Type Styling */
+    .search-type-text {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #4facfe;
+        text-transform: uppercase;
+        margin-bottom: 15px;
+        letter-spacing: 0.5px;
+    }
+    .instruction-text {
+        font-size: 0.75rem;
+        opacity: 0.6;
+        margin-top: -10px;
+        margin-bottom: 15px;
+    }
+    
+    /* Search button font size */
+    div[data-testid="stColumn"] button p {
+        font-size: 0.75rem !important;
+        font-weight: 700 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
-
 # --- Sidebar Logic ---
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">Extração de Notícias</div>', unsafe_allow_html=True)
     
-    st.markdown('<div class="sidebar-section-title">Navegação</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section-title">Navegação no sistema</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-explanation">Escolha o modo de busca para realizar extrações por termos específicos ou sites específicos.</div>', unsafe_allow_html=True)
+    
     nav_selection = st.radio(
         "Menu",
         ["Busca por Termo", "Busca por Site"],
@@ -137,7 +191,11 @@ with st.sidebar:
     )
     selection = nav_selection
     
-    st.markdown('<div class="sidebar-section-title">Configurações Globais</div>', unsafe_allow_html=True)
+    st.divider()
+    
+    st.markdown('<div class="sidebar-section-title">Filtros e Configurações</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-explanation">Ajuste o período e a profundidade da busca para obter resultados mais precisos.</div>', unsafe_allow_html=True)
+    
     time_option = st.selectbox(
         "Período",
         ["Qualquer data", "Últimos 7 dias", "Últimas 24 horas", "Último mês", "Período personalizado"],
@@ -203,6 +261,7 @@ def fetch_news_rss(keyword, is_site, num_news, time_option, start_date=None, end
 
 def display_dashboard(df):
     if df is not None and not df.empty:
+        st.divider()
         total = len(df)
         sources = df['keyword'].nunique()
         st.markdown(f"""
@@ -233,7 +292,6 @@ def display_dashboard(df):
         col1, col2 = st.columns(2)
         with col1:
             all_data = BytesIO()
-            # Drop desc and is_site columns as requested
             export_df = df.drop(columns=['desc', 'is_site'], errors='ignore')
             export_df.rename(columns={"title":"Título","media":"Fonte","date":"Data","link":"Link","keyword":"Busca"}, inplace=False).to_excel(all_data, index=False, engine='openpyxl')
             all_data.seek(0)
@@ -282,18 +340,33 @@ def display_dashboard(df):
             except Exception as e:
                 st.error(f"Erro ao gerar PDF: {e}")
 
+# --- Hero Header ---
+st.markdown("""
+<div class="hero-container">
+    <div class="hero-title">Realize uma nova Busca</div>
+    <div class="hero-subtext">
+        Digite os termos de interesse ou domínios específicos para monitorar as últimas notícias. 
+        Utilize vírgulas para separar múltiplas entradas. A precisão dos resultados depende da abrangência das palavras-chave escolhidas.
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 # --- Search Area ---
 if selection == "Busca por Termo":
-    # st.markdown('<div class="search-container">', unsafe_allow_html=True)
-    st.markdown('<div class="search-type-header">Busca por Termo</div>', unsafe_allow_html=True)
-    
-    col_input, col_submit = st.columns([6, 1])
-    with col_input:
-        default_val = "jucepi, Alzenir Porto, Gov.Pi empresas, empreendedorismo"
-        query_val = st.text_input("Busca", value=default_val, label_visibility="collapsed")
-    with col_submit:
-        exec_search = st.button("PESQUISAR", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="centered-card">', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="search-type-text">Busca por Termo</div>', unsafe_allow_html=True)
+            
+            col_input, col_submit = st.columns([6, 1])
+            with col_input:
+                default_val = "jucepi, Alzenir Porto, Gov.Pi empresas, empreendedorismo"
+                query_val = st.text_input("Busca", value=default_val, label_visibility="collapsed")
+            with col_submit:
+                exec_search = st.button("PESQUISAR", use_container_width=True)
+            
+            st.markdown('<div class="instruction-text">Separe por vírgula os termos de interesse</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if exec_search:
         keys = [p.strip() for p in query_val.split(",") if p.strip()]
@@ -309,16 +382,20 @@ if selection == "Busca por Termo":
     display_dashboard(st.session_state.noticias_termo)
 
 elif selection == "Busca por Site":
-    # st.markdown('<div class="search-container">', unsafe_allow_html=True)
-    st.markdown('<div class="search-type-header">Busca por Site</div>', unsafe_allow_html=True)
-    
-    col_input, col_submit = st.columns([6, 1])
-    with col_input:
-        default_sites = "pi.gov.br, g1.globo.com"
-        sites_val = st.text_input("Domínios", value=default_sites, label_visibility="collapsed")
-    with col_submit:
-        exec_search_site = st.button("PESQUISAR", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="centered-card">', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="search-type-text">Busca por Site</div>', unsafe_allow_html=True)
+            
+            col_input, col_submit = st.columns([6, 1])
+            with col_input:
+                default_sites = "pi.gov.br, g1.globo.com"
+                sites_val = st.text_input("Domínios", value=default_sites, label_visibility="collapsed")
+            with col_submit:
+                exec_search_site = st.button("PESQUISAR", use_container_width=True)
+            
+            st.markdown('<div class="instruction-text">Separe por vírgula os domínios (ex: g1.globo.com, uol.com.br)</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if exec_search_site:
         keys = [p.strip() for p in sites_val.split(",") if p.strip()]
